@@ -1,5 +1,4 @@
 import 'dart:io' as io;
-
 import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,6 +11,8 @@ void main() {
   runApp(const MyApp());
 }
 
+
+
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -21,107 +22,158 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final controller = UltralyticsYoloCameraController();
-
+  bool _isCameraReady = false;
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: FutureBuilder<bool>(
-          future: _checkPermissions(),
-          builder: (context, snapshot) {
-            final allPermissionsGranted = snapshot.data ?? false;
+    try {
+      return MaterialApp(
+        home: Scaffold(
+          body: FutureBuilder(
+            future: _checkPermissions(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                print('Error: ${snapshot.error}');
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData) {
+                return Center(child: CircularProgressIndicator());
+              }
+              final predictor = snapshot.data;
 
-            return !allPermissionsGranted
-                ? Container()
-                : FutureBuilder<ObjectDetector>(
-                    future: _initObjectDetectorWithLocalModel(),
-                    builder: (context, snapshot) {
-                      final predictor = snapshot.data;
-
-                      return predictor == null
-                          ? Container()
-                          : Stack(
-                              children: [
-                                UltralyticsYoloCameraPreview(
-                                  controller: controller,
-                                  predictor: predictor,
-                                  onCameraCreated: () {
-                                    predictor.loadModel(useGpu: true);
-                                  },
+              final allPermissionsGranted = snapshot.data ?? false;
+              if (!allPermissionsGranted) {
+                return Container();
+              }
+              return FutureBuilder(
+                future: _initObjectDetectorWithLocalModel(),
+                builder: (context, snapshot) {
+                  final predictor = snapshot.data;
+                  if (predictor == null) {
+                    return Container();
+                  }
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isFoldable = constraints.maxWidth > 600;
+                      return Stack(
+                        children: [
+                          UltralyticsYoloCameraPreview(
+                            controller: controller,
+                            predictor: predictor,
+                            onCameraCreated: () async {
+                              try {
+                                await predictor.loadModel(useGpu: true);
+                                print('Model loaded successfully');
+                              } catch (e) {
+                                print('Error loading model: $e');
+                              }
+                              setState(() {
+                                print('Camera created successfully');
+                                _isCameraReady = true;
+                              });
+                            },
+                          ),
+                          StreamBuilder(
+                            stream: predictor.inferenceTime,
+                            builder: (context, snapshot) {
+                              final inferenceTime = snapshot.data;
+                              return StreamBuilder(
+                                stream: predictor.fpsRate,
+                                builder: (context, snapshot) {
+                                  final fpsRate = snapshot.data;
+                                  return Times(
+                                    inferenceTime: inferenceTime,
+                                    fpsRate: fpsRate,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                          if (isFoldable) ...[
+                            // Additional UI elements or adjustments for foldable screens
+                            Positioned(
+                              top: 50,
+                              left: 50,
+                              child: Container(
+                                padding: EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                StreamBuilder<double?>(
-                                  stream: predictor.inferenceTime,
-                                  builder: (context, snapshot) {
-                                    final inferenceTime = snapshot.data;
-
-                                    return StreamBuilder<double?>(
-                                      stream: predictor.fpsRate,
-                                      builder: (context, snapshot) {
-                                        final fpsRate = snapshot.data;
-
-                                        return Times(
-                                          inferenceTime: inferenceTime,
-                                          fpsRate: fpsRate,
-                                        );
-                                      },
-                                    );
-                                  },
+                                child: Text(
+                                  'Foldable Mode',
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 18),
                                 ),
-                              ],
-                            );
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 100,
+                              right: 20,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // 추가 기능 구현
+                                    },
+                                    child: Text('Additional Feature'),
+                                  ),
+                                  SizedBox(height: 10),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // 설정 화면으로 이동
+                                    },
+                                    child: Text('Settings'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
                     },
                   );
-            // : FutureBuilder<ObjectClassifier>(
-            //     future: _initObjectClassifierWithLocalModel(),
-            //     builder: (context, snapshot) {
-            //       final predictor = snapshot.data;
-
-            //       return predictor == null
-            //           ? Container()
-            //           : Stack(
-            //               children: [
-            //                 UltralyticsYoloCameraPreview(
-            //                   controller: controller,
-            //                   predictor: predictor,
-            //                   onCameraCreated: () {
-            //                     predictor.loadModel();
-            //                   },
-            //                 ),
-            //                 StreamBuilder<double?>(
-            //                   stream: predictor.inferenceTime,
-            //                   builder: (context, snapshot) {
-            //                     final inferenceTime = snapshot.data;
-
-            //                     return StreamBuilder<double?>(
-            //                       stream: predictor.fpsRate,
-            //                       builder: (context, snapshot) {
-            //                         final fpsRate = snapshot.data;
-
-            //                         return Times(
-            //                           inferenceTime: inferenceTime,
-            //                           fpsRate: fpsRate,
-            //                         );
-            //                       },
-            //                     );
-            //                   },
-            //                 ),
-            //               ],
-            //             );
-            //     },
-            //   );
-          },
+                },
+              );
+            },
+          ),
+          floatingActionButton: FloatingActionButton(
+            child: const Icon(Icons.cameraswitch),
+            onPressed: () async {
+              if (await isCameraReady()) {
+                try {
+                  await controller.toggleLensDirection();
+                } catch (e) {
+                  print('Error toggling lens direction: $e');
+                }
+              } else {
+                print('Camera is not ready');
+              }
+            },
+          ),
         ),
-        floatingActionButton: FloatingActionButton(
-          child: const Icon(Icons.abc),
-          onPressed: () {
-            controller.toggleLensDirection();
-          },
+      );
+    }
+    catch (e, stackTrace) {
+      print('Error in build method: $e');
+      print('Stack trace: $stackTrace');
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('An error occurred: $e'),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
-  Future<ObjectDetector> _initObjectDetectorWithLocalModel() async {
+  Future<bool> isCameraReady() async {
+    // 카메라 상태를 확인하는 로직을 구현합니다.
+    // 예를 들어, controller의 상태를 확인하는 메서드를 호출할 수 있습니다.
+    return _isCameraReady;
+  }
+
+  Future<ObjectDetector?> _initObjectDetectorWithLocalModel() async {
     // final modelPath = await _copy('assets/yolov8n.mlmodel');
     // final model = LocalYoloModel(
     //   id: '',
@@ -129,17 +181,28 @@ class _MyAppState extends State<MyApp> {
     //   format: Format.coreml,
     //   modelPath: modelPath,
     // );
-    final modelPath = await _copy('assets/yolov8n_int8.tflite');
-    final metadataPath = await _copy('assets/metadata.yaml');
-    final model = LocalYoloModel(
-      id: '',
-      task: Task.detect,
-      format: Format.tflite,
-      modelPath: modelPath,
-      metadataPath: metadataPath,
-    );
+    try {
 
-    return ObjectDetector(model: model);
+      //final modelPath = await _copy('assets/yolov8n_int8.tflite');
+      //final modelPath = await _copy('assets/test_int8.tflite');
+      final modelPath = await _copy('assets/best_240825_320.tflite');
+      //final metadataPath = await _copy('assets/metadata.yaml');
+      final metadataPath = await _copy('assets/metadata_signboard.yaml');
+      print('Model path: $modelPath');
+      print('Metadata path: $metadataPath');
+      final model = LocalYoloModel(
+        id: '',
+        task: Task.detect,
+        format: Format.tflite,
+        modelPath: modelPath,
+        metadataPath: metadataPath,
+      );
+      return ObjectDetector(model: model);
+    } catch (e) {
+      print('Error initializing model: $e');
+      return null;
+    }
+
   }
 
   Future<ImageClassifier> _initImageClassifierWithLocalModel() async {
@@ -178,26 +241,39 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<bool> _checkPermissions() async {
-    List<Permission> permissions = [];
+    // 카메라 권한 요청
+    var cameraStatus = await Permission.camera.request();
+    if (!cameraStatus.isGranted) {
+      print('Camera permission denied');
+      return false;
+    }
 
-    var cameraStatus = await Permission.camera.status;
-    if (!cameraStatus.isGranted) permissions.add(Permission.camera);
+    // Android 13 (SDK 33) 이상인지 확인
+    if (io.Platform.isAndroid) {
+      if (await Permission.storage.status.isPermanentlyDenied) {
+        // Android 13 이상에서는 특정 미디어 타입에 대한 권한을 요청
+        Map<Permission, PermissionStatus> statuses = await [
+          Permission.photos,
+          Permission.videos,
+        ].request();
 
-    var storageStatus = await Permission.storage.status;
-    if (!storageStatus.isGranted) permissions.add(Permission.storage);
-
-    if (permissions.isEmpty) {
-      return true;
-    } else {
-      try {
-        Map<Permission, PermissionStatus> statuses =
-            await permissions.request();
-        return statuses[Permission.camera] == PermissionStatus.granted &&
-            statuses[Permission.storage] == PermissionStatus.granted;
-      } on Exception catch (_) {
-        return false;
+        if (statuses[Permission.photos] != PermissionStatus.granted ||
+            statuses[Permission.videos] != PermissionStatus.granted) {
+          print('Media permissions denied');
+          return false;
+        }
+      } else {
+        // Android 12 이하에서는 기존 저장소 권한 요청
+        var storageStatus = await Permission.storage.request();
+        if (!storageStatus.isGranted) {
+          print('Storage permission denied');
+          return false;
+        }
       }
     }
+
+    print('All required permissions granted');
+    return true;
   }
 }
 
