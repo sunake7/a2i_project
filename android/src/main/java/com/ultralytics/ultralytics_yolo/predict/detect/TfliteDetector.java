@@ -178,10 +178,59 @@ public class TfliteDetector extends Detector {
         output = new float[outputShape2][outputShape3];
     }
 
+    // public void predict(ImageProxy imageProxy, boolean isMirrored) {
+    //     if (interpreter == null || imageProxy == null) {
+    //         return;
+    //     }
+
+    //     Bitmap bitmap = ImageUtils.toBitmap(imageProxy);
+    //     Canvas canvas = new Canvas(pendingBitmapFrame);
+    //     Matrix cropToFrameTransform = new Matrix();
+    //     transformationMatrix.invert(cropToFrameTransform);
+    //     canvas.drawBitmap(bitmap, transformationMatrix, null);
+
+    //     handler.post(() -> {
+    //         setInput(pendingBitmapFrame);
+
+    //         long start = System.currentTimeMillis();
+    //         float[][] result = runInference();
+    //         long end = System.currentTimeMillis();
+
+    //         // Increment frame count
+    //         frameCount++;
+
+    //         // Check if it's time to update FPS
+    //         long elapsedMillis = end - lastFpsTime;
+    //         if (elapsedMillis > FPS_INTERVAL_MS) {
+    //             // Calculate frames per second
+    //             float fps = (float) frameCount / elapsedMillis * 1000.f;
+
+    //             // Reset counters for the next interval
+    //             lastFpsTime = end;
+    //             frameCount = 0;
+
+    //             // Log or display the FPS
+    //             fpsRateCallback.onResult(fps);
+    //         }
+
+    //         objectDetectionResultCallback.onResult(result);
+    //         inferenceTimeCallback.onResult(end - start);
+    //     });
+    // }
+
+    private long lastInferenceTime = 0;
+
     public void predict(ImageProxy imageProxy, boolean isMirrored) {
         if (interpreter == null || imageProxy == null) {
             return;
         }
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastInferenceTime < INFERENCE_INTERVAL_MS) {
+            return;  // 너무 이른 요청은 무시
+        }
+
+        lastInferenceTime = currentTime;
 
         Bitmap bitmap = ImageUtils.toBitmap(imageProxy);
         Canvas canvas = new Canvas(pendingBitmapFrame);
@@ -193,7 +242,7 @@ public class TfliteDetector extends Detector {
             setInput(pendingBitmapFrame);
 
             long start = System.currentTimeMillis();
-            float[][] result = runInference();
+            List<ClassificationResult> result = runInference();
             long end = System.currentTimeMillis();
 
             // Increment frame count
@@ -213,10 +262,11 @@ public class TfliteDetector extends Detector {
                 fpsRateCallback.onResult(fps);
             }
 
-            objectDetectionResultCallback.onResult(result);
+            classificationResultCallback.onResult(result);
             inferenceTimeCallback.onResult(end - start);
         });
     }
+
 
     private void setInput(Bitmap resizedbitmap) {
         ByteBuffer imgData = ByteBuffer.allocateDirect(1 * INPUT_SIZE * INPUT_SIZE * 3 * NUM_BYTES_PER_CHANNEL);
