@@ -48,33 +48,6 @@ class ObjectDetectorPainter extends CustomPainter {
         Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
       );
       canvas.restore();
-
-      // 레이블 그리기 (원본 코드 유지)
-      final index = detectedObject.index % colors.length;
-      final color = colors[index];
-
-      // 레이블을 해당 객체 위에 그리기
-      final builder = ui.ParagraphBuilder(
-        ui.ParagraphStyle(
-          textAlign: TextAlign.left,
-          fontSize: 16,
-          textDirection: TextDirection.ltr,
-        ),
-      )
-        ..pushStyle(
-          ui.TextStyle(
-            color: Colors.white,
-            background: Paint()..color = color.withOpacity(0.7),
-          ),
-        )
-        ..addText(' ${detectedObject.label} '
-            '${(detectedObject.confidence * 100).toStringAsFixed(1)}%\n')
-        ..pop();
-
-      canvas.drawParagraph(
-        builder.build()..layout(ui.ParagraphConstraints(width: width)),
-        Offset(max(0, left), max(0, top)),
-      );
     }
   }
 
