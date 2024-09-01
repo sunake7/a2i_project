@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import 'package:ultralytics_yolo/ultralytics_yolo_platform_interface.dart';
 
+import '../predict/detect/object_detector_blur.dart';
+
 const String _viewType = 'ultralytics_yolo_camera_preview';
 
 /// A widget that displays the camera preview and run inference on the frames
@@ -107,20 +109,15 @@ class _UltralyticsYoloCameraPreviewState
               switch (widget.predictor.runtimeType) {
                 case ObjectDetector:
                   return StreamBuilder(
-                    stream: (widget.predictor! as ObjectDetector)
-                        .detectionResultStream,
+                    stream: (widget.predictor! as ObjectDetector).detectionResultStream,
                     builder: (
-                      BuildContext context,
-                      AsyncSnapshot<List<DetectedObject?>?> snapshot,
-                    ) {
+                        BuildContext context,
+                        AsyncSnapshot<List<DetectedObject?>?> snapshot,
+                        ) {
                       if (snapshot.data == null) return Container();
 
-                      return CustomPaint(
-                        painter: ObjectDetectorPainter(
-                          snapshot.data! as List<DetectedObject>,
-                          widget.boundingBoxesColorList,
-                          widget.controller.value.strokeWidth,
-                        ),
+                      return ObjectDetectorBlur(
+                        detectionResults: snapshot.data! as List<DetectedObject>,
                       );
                     },
                   );
