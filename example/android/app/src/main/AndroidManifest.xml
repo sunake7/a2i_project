@@ -11,9 +11,9 @@
 
     
    <application
-        android:label="ultralytics_yolo_example"
+        android:label="YOLP"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/yolp">
 
         <uses-library android:name="libOpenCL.so"
             android:required="false"/>

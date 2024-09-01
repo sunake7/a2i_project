@@ -41,6 +41,8 @@ public class TfliteDetector extends Detector {
 
     private static final long FPS_INTERVAL_MS = 1000; // Update FPS every 1000 milliseconds (1 second)
     private static final int NUM_BYTES_PER_CHANNEL = 4;
+    private static final long INFERENCE_INTERVAL_MS = 150;
+    private long lastInferenceTime = 0;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Matrix transformationMatrix;
     private final Bitmap pendingBitmapFrame;
@@ -178,95 +180,52 @@ public class TfliteDetector extends Detector {
         output = new float[outputShape2][outputShape3];
     }
 
-    // public void predict(ImageProxy imageProxy, boolean isMirrored) {
-    //     if (interpreter == null || imageProxy == null) {
-    //         return;
-    //     }
+     public void predict(ImageProxy imageProxy, boolean isMirrored) {
+         if (interpreter == null || imageProxy == null) {
+             return;
+         }
 
-    //     Bitmap bitmap = ImageUtils.toBitmap(imageProxy);
-    //     Canvas canvas = new Canvas(pendingBitmapFrame);
-    //     Matrix cropToFrameTransform = new Matrix();
-    //     transformationMatrix.invert(cropToFrameTransform);
-    //     canvas.drawBitmap(bitmap, transformationMatrix, null);
-
-    //     handler.post(() -> {
-    //         setInput(pendingBitmapFrame);
-
-    //         long start = System.currentTimeMillis();
-    //         float[][] result = runInference();
-    //         long end = System.currentTimeMillis();
-
-    //         // Increment frame count
-    //         frameCount++;
-
-    //         // Check if it's time to update FPS
-    //         long elapsedMillis = end - lastFpsTime;
-    //         if (elapsedMillis > FPS_INTERVAL_MS) {
-    //             // Calculate frames per second
-    //             float fps = (float) frameCount / elapsedMillis * 1000.f;
-
-    //             // Reset counters for the next interval
-    //             lastFpsTime = end;
-    //             frameCount = 0;
-
-    //             // Log or display the FPS
-    //             fpsRateCallback.onResult(fps);
-    //         }
-
-    //         objectDetectionResultCallback.onResult(result);
-    //         inferenceTimeCallback.onResult(end - start);
-    //     });
-    // }
-
-    private long lastInferenceTime = 0;
-
-    public void predict(ImageProxy imageProxy, boolean isMirrored) {
-        if (interpreter == null || imageProxy == null) {
-            return;
-        }
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastInferenceTime < INFERENCE_INTERVAL_MS) {
+         long currentTime = System.currentTimeMillis();
+         if (currentTime - lastInferenceTime < INFERENCE_INTERVAL_MS) {
             return;  // 너무 이른 요청은 무시
         }
 
         lastInferenceTime = currentTime;
 
-        Bitmap bitmap = ImageUtils.toBitmap(imageProxy);
-        Canvas canvas = new Canvas(pendingBitmapFrame);
-        Matrix cropToFrameTransform = new Matrix();
-        transformationMatrix.invert(cropToFrameTransform);
-        canvas.drawBitmap(bitmap, transformationMatrix, null);
+         Bitmap bitmap = ImageUtils.toBitmap(imageProxy);
+         Canvas canvas = new Canvas(pendingBitmapFrame);
+         Matrix cropToFrameTransform = new Matrix();
+         transformationMatrix.invert(cropToFrameTransform);
+         canvas.drawBitmap(bitmap, transformationMatrix, null);
 
-        handler.post(() -> {
-            setInput(pendingBitmapFrame);
+         handler.post(() -> {
+             setInput(pendingBitmapFrame);
 
-            long start = System.currentTimeMillis();
-            List<ClassificationResult> result = runInference();
-            long end = System.currentTimeMillis();
+             long start = System.currentTimeMillis();
+             float[][] result = runInference();
+             long end = System.currentTimeMillis();
 
-            // Increment frame count
-            frameCount++;
+             // Increment frame count
+             frameCount++;
 
-            // Check if it's time to update FPS
-            long elapsedMillis = end - lastFpsTime;
-            if (elapsedMillis > FPS_INTERVAL_MS) {
-                // Calculate frames per second
-                float fps = (float) frameCount / elapsedMillis * 1000.f;
+             // Check if it's time to update FPS
+             long elapsedMillis = end - lastFpsTime;
+             if (elapsedMillis > FPS_INTERVAL_MS) {
+                 // Calculate frames per second
+                 float fps = (float) frameCount / elapsedMillis * 1000.f;
 
-                // Reset counters for the next interval
-                lastFpsTime = end;
-                frameCount = 0;
+                 // Reset counters for the next interval
+                 lastFpsTime = end;
+                 frameCount = 0;
 
-                // Log or display the FPS
-                fpsRateCallback.onResult(fps);
-            }
+                 // Log or display the FPS
+                 fpsRateCallback.onResult(fps);
+             }
 
-            classificationResultCallback.onResult(result);
-            inferenceTimeCallback.onResult(end - start);
-        });
-    }
-
+             objectDetectionResultCallback.onResult(result);
+             inferenceTimeCallback.onResult(end - start);
+         });
+     }
 
     private void setInput(Bitmap resizedbitmap) {
         ByteBuffer imgData = ByteBuffer.allocateDirect(1 * INPUT_SIZE * INPUT_SIZE * 3 * NUM_BYTES_PER_CHANNEL);
