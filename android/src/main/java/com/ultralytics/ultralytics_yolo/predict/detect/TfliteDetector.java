@@ -41,7 +41,7 @@ public class TfliteDetector extends Detector {
 
     private static final long FPS_INTERVAL_MS = 1000; // Update FPS every 1000 milliseconds (1 second)
     private static final int NUM_BYTES_PER_CHANNEL = 4;
-    private static final long INFERENCE_INTERVAL_MS = 300;
+    private static final long INFERENCE_INTERVAL_MS = 150;
     private long lastInferenceTime = 0;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Matrix transformationMatrix;
