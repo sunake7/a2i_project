@@ -14,7 +14,7 @@ https://github.com/ultralytics/yolo-flutter-app
 
 ## 📄 License
 
-This project, developed as part of a 2024 Summer Ambient AI BootCamp & Competition, inherits its licensing from the Ultralytics YOLO repository:
+This project, developed as part of a 2024 Summer SNU Ambient AI BootCamp & Competition, inherits its licensing from the Ultralytics YOLO repository:
 
 - **AGPL-3.0 License**: This project is licensed under the AGPL-3.0 License, as defined by Ultralytics. This [OSI-approved](https://opensource.org/licenses/) open-source license is well-suited for students, enthusiasts, and researchers who value open collaboration and knowledge sharing. For full details, please refer to the [LICENSE](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) document.
 
