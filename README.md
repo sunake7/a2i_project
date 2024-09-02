@@ -8,6 +8,10 @@ https://github.com/ultralytics/yolo-flutter-app
 | ---------------- | ------- | --- |
 | Detection & Blur | ✅       | ❌   |
 
+## Result example
+
+![Result Image](yolp_example.png)
+
 ## 📄 License
 
 This project, developed as part of a 2024 Summer Ambient AI BootCamp & Competition, inherits its licensing from the Ultralytics YOLO repository:
